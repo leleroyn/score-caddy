@@ -1,0 +1,14 @@
+{
+  "pages": [
+    "pages/create/create",
+    "pages/room/room"
+  ],
+  "window": {
+    "navigationBarTitleText": "把把赢记分器",
+    "navigationBarBackgroundColor": "#667eea",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f0f2f5"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

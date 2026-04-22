@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# WeChat DevTools
+project.private.config.json
+
+# OpenCode
+.opencode/
+
+# WorkBuddy
+.workbuddy/
+
+# Environment
+.env
+.env.local

@@ -1,0 +1,171 @@
+<!-- pages/room/room.wxml -->
+<view class="container">
+
+  <!-- 加载中 -->
+  <view wx:if="{{isLoading}}" class="loading-wrapper">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载房间信息...</text>
+  </view>
+
+  <!-- 已结束的横幅 -->
+  <view wx:if="{{!isLoading && isGameFinished}}" class="finished-banner">
+    <text class="finished-icon">&#x1F3C6;</text>
+    <text class="finished-text">游戏已结束</text>
+  </view>
+
+  <!-- 房间头部 -->
+  <view wx:if="{{!isLoading}}" class="room-header">
+    <view class="room-code-wrapper">
+      <text class="room-code-label">房间号</text>
+      <text class="room-code-value" bindtap="copyRoomCode">{{roomInfo.roomCode}}</text>
+      <text class="room-code-tip">点击复制</text>
+    </view>
+      <view class="room-meta">
+        <view class="meta-item">
+          <text class="meta-count">{{players.length}}</text>
+          <text class="meta-label">/ {{maxPlayers || roomInfo.maxPlayers || '?'}} 人</text>
+        </view>
+      <view class="meta-status {{isGameFinished ? 'status-finished' : 'status-playing'}}">
+        <text>{{isGameFinished ? '已结束' : '进行中'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 玩家列表 -->
+  <view wx:if="{{!isLoading}}" class="players-section">
+    <block wx:for="{{players}}" wx:key="openid">
+      <!-- 自己的卡片（不可点击） -->
+      <view wx:if="{{openid === myOpenId}}" class="player-card self-card">
+        <view class="player-avatar-wrap self-avatar">
+          <image 
+            src="{{avatarUrl || '/images/default-avatar.svg'}}" 
+            mode="aspectFill" 
+            class="player-avatar-img"
+          />
+          <text class="self-badge">我</text>
+        </view>
+        <view class="player-detail">
+          <text class="player-name">{{nickName || '等待加入'}}</text>
+          <view class="score-display {{score > 0 ? 'score-positive' : score < 0 ? 'score-negative' : 'score-zero'}}">
+            <text class="score-value">{{score}}</text>
+            <text class="score-unit">分</text>
+          </view>
+        </view>
+        <view class="player-role-tag creator-tag" wx:if="{{openid === roomInfo.creatorId}}">
+          <text>房主</text>
+        </view>
+      </view>
+
+      <!-- 其他玩家的卡片（可点击送分） -->
+      <view 
+        wx:else 
+        class="player-card other-card {{isGameFinished ? 'disabled' : ''}}"
+        data-index="{{index}}"
+        data-openid="{{openid}}"
+        data-nickname="{{nickName || '匿名用户'}}"
+        bindtap="onPlayerTap"
+        hover-class="card-hover"
+      >
+        <view class="player-avatar-wrap">
+          <image 
+            src="{{avatarUrl || '/images/default-avatar.svg'}}" 
+            mode="aspectFill" 
+            class="player-avatar-img"
+          />
+        </view>
+        <view class="player-detail">
+          <text class="player-name">{{nickName || '等待加入'}}</text>
+          <view class="score-display {{score > 0 ? 'score-positive' : score < 0 ? 'score-negative' : 'score-zero'}}">
+            <text class="score-value">{{score}}</text>
+            <text class="score-unit">分</text>
+          </view>
+        </view>
+        <view class="player-action-hint" wx:if="{{!isGameFinished}}">
+          <text>点击送分</text>
+        </view>
+        <view class="player-role-tag creator-tag" wx:if="{{openid === roomInfo.creatorId}}">
+          <text>房主</text>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 底部操作区 -->
+  <view wx:if="{{!isLoading}}" class="bottom-actions">
+    <!-- 结算按钮（仅房主、游戏中可见） -->
+    <button 
+      wx:if="{{isOwner && !isGameFinished}}"
+      class="btn-settle" 
+      bindtap="settleGame"
+    >
+      结算游戏
+    </button>
+
+    <!-- 已结算后返回首页按钮 -->
+    <button 
+      wx:if="{{isGameFinished}}"
+      class="btn-back" 
+      bindtap="goBack"
+    >
+      返回首页
+    </button>
+
+    <!-- 分享邀请（进行中且人数未满） -->
+    <button 
+      wx:if="{{!isGameFinished}}"
+      class="btn-share" 
+      open-type="share"
+    >
+      邀请好友加入
+    </button>
+  </view>
+
+  <!-- 送分弹窗 -->
+  <view wx:if="{{showKeypad}}" class="modal-mask" catchtap="cancelSend">
+    <view class="modal-sheet" catchtap="stopPropagation">
+      <!-- 弹窗头部 -->
+      <view class="modal-header">
+        <text class="modal-title">向 {{targetNickname}} 送分</text>
+        <view class="modal-close" catchtap="cancelSend">
+          <text>✕</text>
+        </view>
+      </view>
+
+      <!-- 分数输入 -->
+      <view class="modal-body">
+        <view class="score-input-area">
+          <input 
+            class="score-input" 
+            type="number"
+            keyboard-type="number"
+            placeholder="0"
+            value="{{keypadValue}}"
+            bindinput="onKeypadInput"
+            focus="{{showKeypad}}"
+            maxlength="5"
+          />
+          <text class="score-input-unit">分</text>
+        </view>
+
+        <!-- 快捷金额 -->
+        <view class="quick-amounts">
+          <view class="quick-btn" bindtap="setQuickAmount" data-amount="1">+1</view>
+          <view class="quick-btn" bindtap="setQuickAmount" data-amount="5">+5</view>
+          <view class="quick-btn" bindtap="setQuickAmount" data-amount="10">+10</view>
+          <view class="quick-btn" bindtap="setQuickAmount" data-amount="50">+50</view>
+          <view class="quick-btn" bindtap="setQuickAmount" data-amount="100">+100</view>
+        </view>
+      </view>
+
+      <!-- 弹窗底部按钮 -->
+      <view class="modal-footer">
+        <view class="modal-btn modal-btn-cancel" catchtap="cancelSend">
+          <text>取消</text>
+        </view>
+        <view class="modal-btn modal-btn-confirm" catchtap="confirmSend">
+          <text>确认送出</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

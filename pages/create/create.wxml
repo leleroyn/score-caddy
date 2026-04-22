@@ -1,0 +1,86 @@
+<!-- pages/create/create.wxml -->
+<view class="container">
+  <!-- 品牌标题 -->
+  <view class="header">
+    <image src="/images/title-art.svg" mode="widthFix" class="title-art" />
+    <text class="subtitle">快速记分助手</text>
+  </view>
+
+  <!-- 个人信息栏 -->
+  <view class="profile-bar">
+    <view class="avatar-btn" bindtap="showAvatarPicker">
+      <image src="{{myAvatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="avatar-img" />
+    </view>
+    <input type="nickname" class="nickname-input" placeholder="取个昵称" value="{{myNickName}}" bindinput="onNicknameConfirm" />
+  </view>
+
+  <!-- 卡通头像选择器 -->
+  <view class="avatar-picker-mask" wx:if="{{showAvatarPicker}}" bindtap="hideAvatarPicker"></view>
+  <view class="avatar-picker {{showAvatarPicker ? 'show' : ''}}">
+    <view class="picker-header">
+      <text class="picker-title">选个头像</text>
+      <text class="picker-close" bindtap="hideAvatarPicker">完成</text>
+    </view>
+    <view class="picker-grid">
+      <view class="picker-item {{myAvatarUrl === item ? 'selected' : ''}}" wx:for="{{avatarList}}" wx:key="*this" bindtap="pickAvatar" data-url="{{item}}">
+        <image src="{{item}}" mode="aspectFill" class="picker-avatar" />
+      </view>
+    </view>
+    <button class="picker-custom-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <text>使用真实头像</text>
+    </button>
+  </view>
+
+  <!-- 主内容卡片 -->
+  <view class="card">
+    <!-- 创建房间 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">创建房间</text>
+      </view>
+      <view class="selector-label">玩家数量</view>
+      <view class="count-row">
+        <view class="count-btn {{playerCount === 2 ? 'active' : ''}}" bindtap="setPlayerCount" data-count="2">2人</view>
+        <view class="count-btn {{playerCount === 3 ? 'active' : ''}}" bindtap="setPlayerCount" data-count="3">3人</view>
+        <view class="count-btn {{playerCount === 4 ? 'active' : ''}}" bindtap="setPlayerCount" data-count="4">4人</view>
+        <view class="count-btn {{playerCount === 5 ? 'active' : ''}}" bindtap="setPlayerCount" data-count="5">5人</view>
+        <view class="count-btn {{playerCount === 6 ? 'active' : ''}}" bindtap="setPlayerCount" data-count="6">6人</view>
+      </view>
+      <view wx:if="{{showMoreCount}}" class="count-row">
+        <view class="count-btn {{playerCount === 7 ? 'active' : ''}}" bindtap="setPlayerCount" data-count="7">7人</view>
+        <view class="count-btn {{playerCount === 8 ? 'active' : ''}}" bindtap="setPlayerCount" data-count="8">8人</view>
+        <view class="count-btn {{playerCount === 9 ? 'active' : ''}}" bindtap="setPlayerCount" data-count="9">9人</view>
+        <view class="count-btn {{playerCount === 10 ? 'active' : ''}}" bindtap="setPlayerCount" data-count="10">10人</view>
+      </view>
+      <view wx:if="{{!showMoreCount}}" class="more-row" bindtap="toggleMoreCount">
+        <text class="more-text">更多人数</text>
+      </view>
+      <button class="btn-create" bindtap="createRoom" loading="{{isCreating}}" disabled="{{isCreating}}">
+        开房间
+      </button>
+    </view>
+
+    <!-- 分隔 -->
+    <view class="sep">
+      <view class="sep-line"></view>
+      <text class="sep-text">已有房间？</text>
+      <view class="sep-line"></view>
+    </view>
+
+    <!-- 加入房间 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">加入房间</text>
+      </view>
+      <view class="join-row">
+        <input class="join-input" type="text" maxlength="6" placeholder="输入房间号" value="{{joinRoomCode}}" bindinput="onJoinCodeInput" bindconfirm="joinRoom" />
+        <button class="btn-join" bindtap="joinRoom" loading="{{isJoining}}" disabled="{{isJoining}}">加入</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 规则提示 -->
+  <view class="rules-tip">
+    <text class="rules-tip-text">每位玩家初始0分，点击其他玩家头像送分（自己减、对方加），房主可随时结算。</text>
+  </view>
+</view>
