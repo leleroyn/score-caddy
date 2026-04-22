@@ -6,6 +6,7 @@ Page({
     roomCode: '',
     roomInfo: null,
     players: [],
+    sortedPlayers: [],
     myOpenId: '',
     isOwner: false,
     isLoading: true,
@@ -14,7 +15,8 @@ Page({
     keypadValue: '',
     selectedTargetId: null,
     targetNickname: '',
-    isSending: false
+    isSending: false,
+    records: []
   },
 
   /**
@@ -30,6 +32,8 @@ Page({
 
     this.initRoom();
     this.setupRoomListener();
+    this.loadRecords();
+    this.setupRecordListener();
   },
 
   /**
@@ -38,6 +42,9 @@ Page({
   onUnload: function () {
     if (this.roomListener) {
       this.roomListener.close();
+    }
+    if (this.recordListener) {
+      this.recordListener.close();
     }
   },
 
@@ -125,9 +132,20 @@ Page({
    * 统一更新房间数据到页面
    */
   _updateRoomData: function (room) {
+    const players = room.players || [];
+
+    // 排序：房主排第一，其余按加入顺序（原数组顺序）
+    const creatorId = room.creatorId;
+    const sorted = [...players].sort((a, b) => {
+      if (a.openid === creatorId) return -1;
+      if (b.openid === creatorId) return 1;
+      return 0;
+    });
+
     this.setData({
       roomInfo: room,
-      players: room.players || [],
+      players: players,
+      sortedPlayers: sorted,
       isLoading: false,
       isGameFinished: room.status === 'finished'
     });
@@ -163,6 +181,81 @@ Page({
         console.error('自动更新用户信息失败:', err);
       });
     }
+  },
+
+  /**
+   * 加载历史送分记录
+   */
+  loadRecords: function () {
+    const db = wx.cloud.database();
+    const _ = db.command;
+    db.collection('score_records')
+      .where({ roomCode: this.data.roomCode })
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get()
+      .then(res => {
+        const records = (res.data || []).map(this._formatRecord);
+        this.setData({ records: records });
+      })
+      .catch(err => {
+        console.error('加载送分记录失败:', err);
+      });
+  },
+
+  /**
+   * 实时监听送分记录新增
+   */
+  setupRecordListener: function () {
+    const db = wx.cloud.database();
+    const _ = db.command;
+    this.recordListener = db.collection('score_records')
+      .where({ roomCode: this.data.roomCode })
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .watch({
+        onChange: res => {
+          if (res.docs && res.docs.length > 0) {
+            const records = res.docs.map(this._formatRecord);
+            this.setData({ records: records });
+          }
+        },
+        onError: err => {
+          console.error('记录监听器错误:', err);
+          if (this.recordListener) {
+            this.recordListener.close();
+          }
+          setTimeout(() => {
+            if (!this.data.isGameFinished) {
+              this.setupRecordListener();
+            }
+          }, 5000);
+        }
+      });
+  },
+
+  /**
+   * 格式化单条记录（解析时间）
+   */
+  _formatRecord: function (doc) {
+    const time = doc.createdAt;
+    let timeStr = '';
+    if (time) {
+      const d = new Date(time);
+      const h = d.getHours().toString().padStart(2, '0');
+      const m = d.getMinutes().toString().padStart(2, '0');
+      timeStr = h + ':' + m;
+    }
+    return {
+      fromOpenId: doc.fromOpenId,
+      toOpenId: doc.toOpenId,
+      fromName: doc.fromName || '匿名',
+      toName: doc.toName || '匿名',
+      fromAvatar: doc.fromAvatar || '',
+      toAvatar: doc.toAvatar || '',
+      value: doc.value || 0,
+      timeStr: timeStr
+    };
   },
 
   /**

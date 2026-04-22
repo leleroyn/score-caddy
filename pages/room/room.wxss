@@ -4,7 +4,7 @@
 .container {
   min-height: 100vh;
   background: #f0f2f5;
-  padding-bottom: calc(140px + env(safe-area-inset-bottom));
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -61,7 +61,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 20px 16px;
+  padding: 16px 16px 12px;
   background: #ffffff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
@@ -78,11 +78,10 @@
 }
 
 .room-code-value {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: #1a1a2e;
   letter-spacing: 3px;
-  cursor: pointer;
 }
 
 .room-code-tip {
@@ -102,7 +101,7 @@
 }
 
 .meta-count {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: #667eea;
 }
@@ -129,48 +128,48 @@
   color: #e65100;
 }
 
-/* ========= 玩家列表 ========= */
-.players-section {
-  padding: 16px 16px 0;
-}
-
-.player-card {
+/* ========= 玩家横向一排 ========= */
+.players-strip {
   display: flex;
+  gap: 8rpx;
+  padding: 16rpx 16rpx;
+  background: #fff;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+.players-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.player-cell {
+  display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  padding: 16px 16px;
-  margin-bottom: 12px;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  min-width: 130rpx;
+  flex-shrink: 0;
   position: relative;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.card-hover {
-  transform: scale(0.98);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}
-
-.player-card.disabled {
+.player-cell.disabled {
   opacity: 0.65;
 }
 
-/* 自己的卡片 */
-.self-card {
+.player-cell.self-cell {
   background: linear-gradient(135deg, #e8f0fe 0%, #f3e8ff 100%);
-  border: 2px solid #c5b3f7;
+  border-radius: 16rpx;
+  padding: 12rpx 8rpx 8rpx;
 }
 
-/* 头像 */
 .player-avatar-wrap {
-  width: 52px;
-  height: 52px;
+  width: 80rpx;
+  height: 80rpx;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  margin-right: 14px;
   position: relative;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 }
 
 .self-avatar {
@@ -188,85 +187,144 @@
   right: -2px;
   background: #667eea;
   color: #fff;
-  font-size: 10px;
+  font-size: 18rpx;
   font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 8px;
-  line-height: 1.4;
+  padding: 0 8rpx;
+  border-radius: 12rpx;
+  line-height: 1.5;
   border: 2px solid #fff;
-}
-
-/* 玩家详情 */
-.player-detail {
-  flex: 1;
-  min-width: 0;
 }
 
 .player-name {
   display: block;
-  font-size: 16px;
+  font-size: 22rpx;
+  font-weight: 500;
+  color: #333;
+  margin-top: 6rpx;
+  max-width: 130rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.player-score {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #333;
+  margin-top: 2rpx;
+}
+
+.player-score.score-positive {
+  color: #e74c3c;
+}
+
+.player-score.score-negative {
+  color: #27ae60;
+}
+
+.creator-tag {
+  font-size: 18rpx;
+  color: #e67e22;
+  background: #fff3e0;
+  padding: 1rpx 10rpx;
+  border-radius: 6rpx;
+  margin-top: 4rpx;
+}
+
+.cell-hover {
+  opacity: 0.7;
+}
+
+/* ========= 送分记录 ========= */
+.records-section {
+  margin: 16rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.records-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.records-title {
+  font-size: 30rpx;
   font-weight: 600;
   color: #1a1a2e;
-  margin-bottom: 4px;
+}
+
+.records-empty {
+  font-size: 24rpx;
+  color: #bbb;
+}
+
+.records-list {
+  max-height: 600rpx;
+  overflow-y: auto;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.record-item:last-child {
+  border-bottom: none;
+}
+
+.record-avatar {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.record-name {
+  font-size: 24rpx;
+  color: #555;
+  flex-shrink: 0;
+  max-width: 100rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.score-display {
-  display: flex;
-  align-items: baseline;
+.record-arrow {
+  font-size: 24rpx;
+  color: #ccc;
+  flex-shrink: 0;
 }
 
-.score-value {
-  font-size: 26px;
+.record-amount {
+  font-size: 28rpx;
   font-weight: 700;
-  line-height: 1.2;
+  color: #333;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
-.score-unit {
-  font-size: 13px;
-  color: #999;
-  margin-left: 4px;
-}
-
-.score-positive .score-value {
+.record-amount.score-positive {
   color: #e74c3c;
 }
 
-.score-negative .score-value {
+.record-amount.score-negative {
   color: #27ae60;
 }
 
-.score-zero .score-value {
-  color: #333;
-}
-
-/* 角色标签 */
-.player-role-tag {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.creator-tag {
-  background: #fff3e0;
-  color: #e67e22;
-}
-
-/* 点击送分提示 */
-.player-action-hint {
+.record-time {
+  font-size: 20rpx;
+  color: #bbb;
   flex-shrink: 0;
-  padding: 4px 10px;
-  background: #f0f2ff;
-  border-radius: 20px;
-  font-size: 11px;
-  color: #667eea;
-  margin-left: 10px;
+  width: 80rpx;
+  text-align: right;
 }
 
 /* ========= 底部操作区 ========= */
@@ -379,7 +437,6 @@
   padding: 24px;
 }
 
-/* 分数输入 */
 .score-input-area {
   display: flex;
   align-items: baseline;
@@ -404,7 +461,6 @@
   margin-left: 6px;
 }
 
-/* 快捷金额 */
 .quick-amounts {
   display: flex;
   flex-wrap: wrap;
@@ -429,7 +485,6 @@
   background: #e8ecf1;
 }
 
-/* 弹窗底部 */
 .modal-footer {
   display: flex;
   padding: 16px 24px 24px;

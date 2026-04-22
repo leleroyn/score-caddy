@@ -91,6 +91,26 @@ exports.main = async (event, context) => {
             'players.$.score': _.inc(scoreValue)
           }
         });
+
+      // 查找双方的昵称和头像，用于记录展示
+      const fromPlayer = room.players.find(p => p.openid === OPENID);
+      const toPlayer = room.players.find(p => p.openid === targetOpenId);
+
+      // 写入送分记录
+      await transaction.collection('score_records').add({
+        data: {
+          roomCode: room.roomCode,
+          roomId: room._id,
+          fromOpenId: OPENID,
+          toOpenId: targetOpenId,
+          fromName: (fromPlayer && fromPlayer.nickName) || '匿名',
+          toName: (toPlayer && toPlayer.nickName) || '匿名',
+          fromAvatar: (fromPlayer && fromPlayer.avatarUrl) || '',
+          toAvatar: (toPlayer && toPlayer.avatarUrl) || '',
+          value: scoreValue,
+          createdAt: db.serverDate()
+        }
+      });
       
       return {
         code: 0,
