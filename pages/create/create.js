@@ -31,11 +31,6 @@ Page({
     const avatarUrl = wx.getStorageSync('avatarUrl') || '';
     this.setData({ myNickName: nickName, myAvatarUrl: avatarUrl });
 
-    const lastRoomCode = wx.getStorageSync('lastRoomCode') || '';
-    if (lastRoomCode) {
-      this.setData({ joinRoomCode: lastRoomCode });
-    }
-
     // 通过分享链接进入，自动填入房间号
     if (options && options.joinCode) {
       this.setData({ joinRoomCode: options.joinCode });

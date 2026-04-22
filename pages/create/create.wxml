@@ -11,7 +11,10 @@
     <view class="avatar-btn" bindtap="showAvatarPicker">
       <image src="{{myAvatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="avatar-img" />
     </view>
-    <input type="nickname" class="nickname-input" placeholder="取个昵称" value="{{myNickName}}" bindinput="onNicknameConfirm" />
+    <view class="profile-info">
+      <text class="profile-label">设置你的游戏身份</text>
+      <input type="nickname" class="nickname-input" placeholder="取个昵称" value="{{myNickName}}" bindinput="onNicknameConfirm" />
+    </view>
   </view>
 
   <!-- 卡通头像选择器 -->
