@@ -3,7 +3,7 @@
 /* ========= 全局容器 ========= */
 .container {
   min-height: 100vh;
-  background: #f0f2f5;
+  background: #ffffff;
   padding-bottom: calc(80px + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
@@ -36,24 +36,13 @@
   color: #999;
 }
 
-/* ========= 游戏结束横幅 ========= */
-.finished-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-}
-
-.finished-icon {
-  font-size: 18px;
-  margin-right: 6px;
-}
-
-.finished-text {
-  font-size: 15px;
-  font-weight: 600;
-  color: #d35400;
+/* ========= 房间信息卡 ========= */
+.room-card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  margin: 16rpx 16rpx 0;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+  overflow: hidden;
 }
 
 /* ========= 房间头部 ========= */
@@ -62,8 +51,6 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 16px 12px;
-  background: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .room-code-wrapper {
@@ -137,6 +124,7 @@
   overflow-x: auto;
   white-space: nowrap;
   -webkit-overflow-scrolling: touch;
+  border-top: 1rpx solid #f5f5f5;
 }
 
 .players-strip::-webkit-scrollbar {
@@ -160,6 +148,7 @@
   background: linear-gradient(135deg, #e8f0fe 0%, #f3e8ff 100%);
   border-radius: 16rpx;
   padding: 12rpx 8rpx 8rpx;
+  box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.15);
 }
 
 .player-avatar-wrap {
@@ -223,14 +212,7 @@
   flex-shrink: 0;
 }
 
-.player-remark {
-  font-size: 20rpx;
-  color: #999;
-  flex-shrink: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+
 
 .player-score {
   font-size: 30rpx;
@@ -239,107 +221,161 @@
   margin-top: 2rpx;
 }
 
+.player-score.score-zero {
+  color: #333;
+}
+
 .player-score.score-positive {
   color: #e74c3c;
 }
 
 .player-score.score-negative {
-  color: #27ae60;
+  color: #2979ff;
 }
 
 .cell-hover {
   opacity: 0.7;
 }
 
-/* ========= 送分记录 ========= */
+/* ========= 茶水系统玩家 ========= */
+.tea-cell {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 12rpx 8rpx 8rpx;
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(255, 152, 0, 0.15);
+}
+
+.tea-avatar {
+  border: 3px solid #FFB74D;
+}
+
+.tea-name {
+  color: #E65100;
+  font-weight: 600;
+}
+
+/* ========= 空状态提示 ========= */
+.empty-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+}
+
+.empty-hint-text {
+  font-size: 28rpx;
+  color: #bbb;
+}
+
+/* ========= 送分记录（聊天对话风格） ========= */
 .records-section {
   margin: 16rpx;
-  background: #fff;
+  background: #f0f2f5;
   border-radius: 16rpx;
-  padding: 24rpx;
+  padding: 16rpx;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
-}
-
-.records-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16rpx;
-}
-
-.records-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #1a1a2e;
 }
 
 .records-empty {
   font-size: 24rpx;
   color: #bbb;
+  padding: 40rpx 0;
+  text-align: center;
 }
 
 .records-list {
   max-height: 600rpx;
-  overflow-y: auto;
+  min-height: 120rpx;
 }
 
-.record-item {
+.chat-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 20rpx;
+}
+
+.chat-row:last-child {
+  margin-bottom: 0;
+}
+
+/* 气泡 */
+.chat-bubble {
+  max-width: 65%;
+  padding: 16rpx 24rpx;
+  border-radius: 16rpx;
+  position: relative;
+}
+
+.chat-bubble-left {
+  background: #ffffff;
+  border-top-left-radius: 4rpx;
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.06);
+}
+
+.chat-bubble-right {
+  background: #95ec69;
+  border-top-right-radius: 4rpx;
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.06);
+}
+
+.chat-desc {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid #f5f5f5;
+  flex-wrap: wrap;
+  margin-bottom: 8rpx;
 }
 
-.record-item:last-child {
-  border-bottom: none;
+.chat-desc-text {
+  font-size: 26rpx;
+  color: #666;
 }
 
-.record-avatar {
-  width: 48rpx;
-  height: 48rpx;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.record-name {
+.chat-name-tag {
   font-size: 24rpx;
-  color: #555;
-  flex-shrink: 0;
-  max-width: 100rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-weight: 600;
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
 }
 
-.record-arrow {
-  font-size: 24rpx;
-  color: #ccc;
-  flex-shrink: 0;
+.chat-name-to {
+  background: rgba(102, 126, 234, 0.12);
+  color: #667eea;
 }
 
-.record-amount {
-  font-size: 28rpx;
-  font-weight: 700;
-  color: #333;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-.record-amount.score-positive {
-  color: #e74c3c;
-}
-
-.record-amount.score-negative {
+.chat-name-from {
+  background: rgba(39, 174, 96, 0.12);
   color: #27ae60;
 }
 
-.record-time {
+.chat-name-me {
+  background: rgba(102, 126, 234, 0.12);
+  color: #667eea;
+  margin-left: 4rpx;
+  margin-right: 4rpx;
+}
+
+.chat-value-inline {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #e74c3c;
+  margin-left: 8rpx;
+  margin-right: 4rpx;
+}
+
+/* 时间 */
+.chat-time-space {
+  display: flex;
+  align-items: flex-end;
+  min-width: 80rpx;
+  flex-shrink: 0;
+}
+
+.chat-time {
   font-size: 20rpx;
   color: #bbb;
-  flex-shrink: 0;
-  width: 80rpx;
-  text-align: right;
+  padding: 0 4rpx;
 }
 
 /* ========= 修改个人信息弹窗 ========= */
@@ -439,6 +475,10 @@
   display: flex;
   gap: 10px;
   z-index: 100;
+  border-top-left-radius: 24rpx;
+  border-top-right-radius: 24rpx;
+  margin: 0 16rpx;
+  width: auto;
 }
 
 .bottom-actions .btn-settle,
@@ -612,3 +652,5 @@
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
 }
+
+

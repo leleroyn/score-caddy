@@ -165,6 +165,50 @@
   color: #667eea;
 }
 
+/* ── 茶水开关 ── */
+.tea-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20rpx;
+  margin-bottom: 28rpx;
+  padding: 0 4rpx;
+}
+
+.tea-label {
+  font-size: 26rpx;
+  color: #555;
+}
+
+.tea-switch {
+  width: 90rpx;
+  height: 48rpx;
+  border-radius: 24rpx;
+  background: #e0e0e0;
+  position: relative;
+  transition: background 0.25s ease;
+}
+
+.tea-switch-on {
+  background: #FFB74D;
+}
+
+.tea-switch-dot {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.15);
+  transition: transform 0.25s ease;
+}
+
+.tea-switch-on .tea-switch-dot {
+  transform: translateX(42rpx);
+}
+
 /* ── 创建按钮 ── */
 .btn-create {
   margin-top: 28rpx;

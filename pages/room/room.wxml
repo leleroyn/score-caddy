@@ -1,4 +1,15 @@
 <!-- pages/room/room.wxml -->
+<wxs module="fmt">
+module.exports = {
+  score: function(v) {
+    var n = v - 0;
+    if (n !== n) return '0';
+    if (n === 0) return '0';
+    if (n > 0) return '+' + n;
+    return '' + n;
+  }
+};
+</wxs>
 <view class="container">
 
   <!-- 加载中 -->
@@ -7,40 +18,35 @@
     <text class="loading-text">加载房间信息...</text>
   </view>
 
-  <!-- 已结束的横幅 -->
-  <view wx:if="{{!isLoading && isGameFinished}}" class="finished-banner">
-    <text class="finished-icon">&#x1F3C6;</text>
-    <text class="finished-text">游戏已结束</text>
-  </view>
-
-  <!-- 房间头部 -->
-  <view wx:if="{{!isLoading}}" class="room-header">
-    <view class="room-code-wrapper">
-      <text class="room-code-label">房间号</text>
-      <text class="room-code-value" bindtap="copyRoomCode">{{roomInfo.roomCode}}</text>
-      <text class="room-code-tip">点击复制</text>
-    </view>
-    <view class="room-meta">
-      <view class="meta-item">
-        <text class="meta-count">{{players.length}}</text>
-        <text class="meta-label">/ {{maxPlayers || roomInfo.maxPlayers || '?'}} 人</text>
+  <!-- 房间信息卡：头部 + 玩家合并 -->
+  <view wx:if="{{!isLoading}}" class="room-card">
+    <view class="room-header">
+      <view class="room-code-wrapper">
+        <text class="room-code-label">房间号</text>
+        <text class="room-code-value" bindtap="copyRoomCode">{{roomInfo.roomCode}}</text>
+        <text class="room-code-tip" wx:if="{{!isGameFinished}}">点击复制</text>
       </view>
-      <view class="meta-status {{isGameFinished ? 'status-finished' : 'status-playing'}}">
-        <text>{{isGameFinished ? '已结束' : '进行中'}}</text>
+      <view class="room-meta">
+        <view class="meta-item">
+          <text class="meta-count">{{sortedPlayers.length}}</text>
+          <text class="meta-label">/ {{maxPlayers || roomInfo.maxPlayers || '?'}} 人</text>
+        </view>
+        <view class="meta-status {{isGameFinished ? 'status-finished' : 'status-playing'}}">
+          <text>{{isGameFinished ? '已结束' : '进行中'}}</text>
+        </view>
       </view>
     </view>
-  </view>
 
-  <!-- 玩家横向一排 -->
-  <view wx:if="{{!isLoading}}" class="players-strip">
+    <!-- 玩家横向一排 -->
+    <view class="players-strip">
     <block wx:for="{{sortedPlayers}}" wx:key="openid">
       <!-- 自己（点击弹出修改弹窗） -->
       <view 
-        class="player-cell self-cell"
+        class="player-cell self-cell {{isGameFinished ? 'disabled' : ''}}"
         data-openid="{{item.openid}}"
         data-index="{{index}}"
         bindtap="onSelfTap"
-        hover-class="cell-hover"
+        hover-class="{{isGameFinished ? 'none' : 'cell-hover'}}"
       >
         <view class="player-avatar-wrap self-avatar">
           <image src="{{item.avatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="player-avatar-img" />
@@ -49,9 +55,8 @@
         <view class="player-name-row">
           <image wx:if="{{item.openid === roomInfo.creatorId}}" class="creator-icon" src="/images/house-icon.svg" mode="aspectFit" />
           <text class="player-name">{{item.nickName || '等待'}}</text>
-          <text class="player-remark" wx:if="{{item.remark}}">({{item.remark}})</text>
         </view>
-        <view class="player-score {{item.score > 0 ? 'score-positive' : item.score < 0 ? 'score-negative' : ''}}">{{item.score}}</view>
+        <view class="player-score {{item.score > 0 ? 'score-positive' : item.score < 0 ? 'score-negative' : 'score-zero'}}">{{fmt.score(item.score)}}</view>
       </view>
       <!-- 其他人（可点击送分） -->
       <view 
@@ -69,30 +74,68 @@
         <view class="player-name-row">
           <image wx:if="{{item.openid === roomInfo.creatorId}}" class="creator-icon" src="/images/house-icon.svg" mode="aspectFit" />
           <text class="player-name">{{item.nickName || '等待'}}</text>
-          <text class="player-remark" wx:if="{{item.remark}}">({{item.remark}})</text>
         </view>
-        <view class="player-score {{item.score > 0 ? 'score-positive' : item.score < 0 ? 'score-negative' : ''}}">{{item.score}}</view>
+        <view class="player-score {{item.score > 0 ? 'score-positive' : item.score < 0 ? 'score-negative' : 'score-zero'}}">{{fmt.score(item.score)}}</view>
       </view>
     </block>
+    <!-- 茶水系统玩家（靠右单独展示） -->
+    <view wx:if="{{teaPlayer}}"
+      class="player-cell tea-cell {{isGameFinished ? 'disabled' : ''}}"
+      data-openid="{{teaPlayer.openid}}"
+      data-nickname="{{teaPlayer.nickName}}"
+      bindtap="onPlayerTap"
+      hover-class="cell-hover"
+    >
+      <view class="player-avatar-wrap tea-avatar">
+        <image src="{{teaPlayer.avatarUrl || '/images/tea-avatar.svg'}}" mode="aspectFill" class="player-avatar-img" />
+      </view>
+      <view class="player-name-row">
+        <text class="player-name tea-name">{{teaPlayer.nickName}}</text>
+      </view>
+      <view class="player-score {{teaPlayer.score > 0 ? 'score-positive' : teaPlayer.score < 0 ? 'score-negative' : 'score-zero'}}">{{fmt.score(teaPlayer.score)}}</view>
+    </view>
+  </view>
   </view>
 
-  <!-- 送分记录区域（占位） -->
-  <view wx:if="{{!isLoading}}" class="records-section">
-    <view class="records-header">
-      <text class="records-title">送分记录</text>
-      <text class="records-empty" wx:if="{{!records || records.length === 0}}">暂无记录</text>
-    </view>
-    <view class="records-list" wx:if="{{records && records.length > 0}}">
-      <view class="record-item" wx:for="{{records}}" wx:key="index">
-        <image src="{{item.fromAvatar || '/images/default-avatar.svg'}}" mode="aspectFill" class="record-avatar" />
-        <text class="record-name">{{item.fromName}}</text>
-        <text class="record-arrow">→</text>
-        <image src="{{item.toAvatar || '/images/default-avatar.svg'}}" mode="aspectFill" class="record-avatar" />
-        <text class="record-name">{{item.toName}}</text>
-        <text class="record-amount {{item.value > 0 ? 'score-positive' : 'score-negative'}}">{{item.value > 0 ? '+' : ''}}{{item.value}}</text>
-        <text class="record-time">{{item.timeStr}}</text>
+  <!-- 空状态提示 -->
+  <view wx:if="{{!isLoading && !isGameFinished && (!records || records.length === 0)}}" class="empty-hint">
+    <text class="empty-hint-text">点击其他玩家头像送分</text>
+  </view>
+
+  <!-- 送分记录区域（聊天对话风格） —— 仅进行中且有记录时显示 -->
+  <view wx:if="{{!isLoading && !isGameFinished && records && records.length > 0}}" class="records-section">
+    <scroll-view class="records-list" scroll-y>
+      <view wx:for="{{records}}" wx:key="index" class="chat-row {{item.isLeft ? 'chat-left' : 'chat-right'}}">
+        <block wx:if="{{item.isLeft}}">
+          <view class="chat-bubble chat-bubble-left">
+            <view class="chat-desc">
+              <text class="chat-name-tag chat-name-me">我</text>
+              <text class="chat-desc-text"> 向 </text>
+              <text class="chat-name-tag chat-name-to">{{item.toName}}</text>
+              <text class="chat-desc-text"> 送 </text>
+              <text class="chat-value-inline">{{item.valueStr}}</text>
+            </view>
+          </view>
+          <view class="chat-time-space">
+            <text class="chat-time">{{item.timeStr}}</text>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="chat-time-space">
+            <text class="chat-time">{{item.timeStr}}</text>
+          </view>
+          <view class="chat-bubble chat-bubble-right">
+            <view class="chat-desc">
+              <text class="chat-name-tag chat-name-from">{{item.fromName}}</text>
+              <text class="chat-desc-text"> 向 </text>
+              <text class="chat-name-tag chat-name-me">我</text>
+              <text class="chat-desc-text"> 送 </text>
+              <text class="chat-value-inline">{{item.valueStr}}</text>
+            </view>
+          </view>
+        </block>
       </view>
-    </view>
+    </scroll-view>
   </view>
 
   <!-- 底部操作区 -->
@@ -101,7 +144,7 @@
       wx:if="{{isOwner && !isGameFinished}}"
       class="btn-settle" 
       bindtap="settleGame"
-    >结算游戏</button>
+    >结束游戏</button>
     <button 
       wx:if="{{isGameFinished}}"
       class="btn-back" 
@@ -166,7 +209,7 @@
         </view>
       </view>
       <view class="modal-body">
-        <!-- 当前头像预览 -->
+        <!-- 头像预览 -->
         <view class="edit-avatar-preview">
           <image src="{{editAvatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="edit-avatar-img" />
         </view>
@@ -184,14 +227,16 @@
         </view>
         <!-- 使用微信头像 -->
         <button class="use-wechat-btn" open-type="chooseAvatar" bindchooseavatar="onChooseWechatAvatar">使用微信头像</button>
-        <!-- 备注输入 -->
+        <!-- 昵称输入 -->
         <view class="profile-edit-field">
-          <text class="edit-label">备注</text>
+          <text class="edit-label">昵称</text>
           <input 
             class="edit-input" 
-            placeholder="给自己加个备注方便辨识"
-            value="{{editRemark}}"
-            bindinput="onRemarkInput"
+            type="nickname"
+            placeholder="输入昵称或使用微信昵称"
+            value="{{editNickname}}"
+            bindinput="onNicknameInput"
+            bindblur="onNicknameConfirm"
             maxlength="10"
           />
         </view>

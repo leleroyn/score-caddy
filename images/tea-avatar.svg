@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="50" fill="#FFF3E0"/>
+  <!-- 蒸汽 -->
+  <path d="M38 30 Q40 22 38 15" stroke="#FFCC80" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <path d="M50 28 Q52 20 50 12" stroke="#FFCC80" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <path d="M62 30 Q64 22 62 15" stroke="#FFCC80" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <!-- 杯身 -->
+  <path d="M25 38 L30 78 Q31 85 38 85 L62 85 Q69 85 70 78 L75 38 Z" fill="#FFB74D" stroke="#F5A623" stroke-width="2"/>
+  <!-- 杯口高光 -->
+  <ellipse cx="50" cy="38" rx="25" ry="5" fill="#FFCC80" stroke="#F5A623" stroke-width="1.5"/>
+  <!-- 杯身内阴影 -->
+  <path d="M30 42 L34 76 Q35 82 40 82 L60 82 Q65 82 66 76 L70 42 Z" fill="none" stroke="#F5A623" stroke-width="1" opacity="0.3"/>
+  <!-- 把手 -->
+  <path d="M75 48 Q90 48 90 60 Q90 72 75 72" fill="none" stroke="#F5A623" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- 托盘 -->
+  <ellipse cx="50" cy="90" rx="32" ry="5" fill="#FFE0B2" stroke="#F5A623" stroke-width="1.5"/>
+</svg>

@@ -1,12 +1,15 @@
 // pages/room/room.js
 const app = getApp();
 
+const TEA_SYSTEM_ID = '__system_tea__';
+
 Page({
   data: {
     roomCode: '',
     roomInfo: null,
     players: [],
     sortedPlayers: [],
+    teaPlayer: null,
     myOpenId: '',
     isOwner: false,
     isLoading: true,
@@ -19,7 +22,7 @@ Page({
     records: [],
     showProfileEdit: false,
     editAvatarUrl: '',
-    editRemark: '',
+    editNickname: '',
     presetAvatars: [
       '/images/avatars/boy-1.svg', '/images/avatars/boy-2.svg', '/images/avatars/boy-3.svg',
       '/images/avatars/girl-1.svg', '/images/avatars/girl-2.svg', '/images/avatars/girl-3.svg',
@@ -32,17 +35,20 @@ Page({
    * 生命周期函数 -- 监听页面加载
    */
   onLoad: function (options) {
-    // 用 setData 正确初始化数据（修复直接赋值的 bug）
+    const self = this;
     this.setData({
       roomCode: options.roomCode || '',
       myOpenId: wx.getStorageSync('openId') || '',
       isOwner: options.isCreator === '1'
     });
 
-    this.initRoom();
-    this.setupRoomListener();
-    this.loadRecords();
-    this.setupRecordListener();
+    this.initRoom().then(function () {
+      if (!self.data.isGameFinished) {
+        self.setupRoomListener();
+        self.setupRecordListener();
+        self.loadRecords();
+      }
+    });
   },
 
   /**
@@ -61,6 +67,7 @@ Page({
    * 分享功能（邀请好友加入房间）
    */
   onShareAppMessage: function () {
+    if (this.data.isGameFinished) return;
     return {
       title: '来玩纸牌送分游戏！房间号：' + this.data.roomCode,
       path: '/pages/create/create?joinCode=' + this.data.roomCode
@@ -69,33 +76,112 @@ Page({
 
   /**
    * 初始化房间数据
+   * 已结束房间从 game_history 集合取数据，进行中房间从 rooms 集合取
    */
   initRoom: function () {
+    const self = this;
     const db = wx.cloud.database();
-    db.collection('rooms').where({
-      roomCode: this.data.roomCode
-    }).get().then(res => {
-      if (res.data.length === 0) {
-        wx.showModal({
-          title: '提示',
-          content: '房间不存在或已解散',
-          showCancel: false,
-          success: () => { wx.navigateBack(); }
-        });
-        return;
-      }
+    const roomCode = this.data.roomCode;
 
-      const room = res.data[0];
-      this._updateRoomData(room);
-    }).catch(err => {
-      console.error('获取房间信息失败:', err);
-      wx.showModal({
-        title: '加载失败',
-        content: '无法获取房间信息，请检查网络后重试',
-        showCancel: false,
-        success: () => { wx.navigateBack(); }
+    // 先查 rooms 表判断状态
+    return db.collection('rooms').where({ roomCode: roomCode }).get()
+      .then(function (res) {
+        if (res.data.length === 0) {
+          // rooms 里找不到，可能是已清理，尝试从 game_history 找
+          return self._loadFromHistory(roomCode);
+        }
+
+        const room = res.data[0];
+
+        if (room.status === 'finished') {
+          // 已结束，从 game_history 取快照
+          return self._loadFromHistory(roomCode, room);
+        }
+
+        // 进行中，走正常流程
+        self._updateRoomData(room);
+        return Promise.resolve();
+      })
+      .catch(function (err) {
+        console.error('获取房间信息失败:', err);
+        wx.showModal({
+          title: '加载失败',
+          content: '无法获取房间信息，请检查网络后重试',
+          showCancel: false,
+          success: function () { wx.navigateBack(); }
+        });
       });
-    });
+  },
+
+  /**
+   * 从 game_history 加载已结束房间数据
+   */
+  _loadFromHistory: function (roomCode, room) {
+    const self = this;
+    const db = wx.cloud.database();
+
+    return db.collection('game_history').where({ roomCode: roomCode }).get()
+      .then(function (res) {
+        if (res.data.length === 0) {
+          wx.showModal({
+            title: '提示',
+            content: '房间不存在或历史记录已清理',
+            showCancel: false,
+            success: function () { wx.navigateBack(); }
+          });
+          return;
+        }
+
+        // 取最新的那条（按 endTime 倒序，文档已按默认排序）
+        let history = res.data[0];
+        // 如果多条，取 endTime 最大的
+        if (res.data.length > 1) {
+          history = res.data.reduce(function (a, b) {
+            return new Date(b.endTime).getTime() > new Date(a.endTime).getTime() ? b : a;
+          }, res.data[0]);
+        }
+
+        // 从快照构造玩家列表
+        const players = history.playersSnapshot || [];
+
+        // 排序：找第一个（通常是房主）
+        const sorted = players.map(function (p) { return p; });
+
+        // 茶水
+        const teaPlayer = history.enableTea ? {
+          openid: TEA_SYSTEM_ID,
+          nickName: history.teaNickName || '茶水',
+          avatarUrl: '/images/tea-avatar.svg',
+          score: history.teaScore || 0,
+          isSystem: true
+        } : null;
+
+        // 构造 roomInfo
+        const roomInfo = room || {
+          roomCode: roomCode,
+          status: 'finished',
+          maxPlayers: players.length
+        };
+
+        self.setData({
+          roomInfo: roomInfo,
+          players: players,
+          sortedPlayers: sorted,
+          teaPlayer: teaPlayer,
+          isLoading: false,
+          isGameFinished: true,
+          records: []
+        });
+      })
+      .catch(function (err) {
+        console.error('获取历史记录失败:', err);
+        wx.showModal({
+          title: '加载失败',
+          content: '无法获取历史记录',
+          showCancel: false,
+          success: function () { wx.navigateBack(); }
+        });
+      });
   },
 
   /**
@@ -103,34 +189,34 @@ Page({
    */
   setupRoomListener: function () {
     const db = wx.cloud.database();
+    const self = this;
     this.roomListener = db.collection('rooms').where({
       roomCode: this.data.roomCode
     }).watch({
-      onChange: res => {
+      onChange: function (res) {
         if (res.docs.length > 0) {
           const room = res.docs[0];
-          const wasFinished = this.data.isGameFinished;
-          this._updateRoomData(room);
+          const wasFinished = self.data.isGameFinished;
+          self._updateRoomData(room);
 
-          // 检测游戏刚刚结束（修复：对比之前的状态，而不是 setData 后的状态）
+          // 检测游戏刚刚结束
           if (room.status === 'finished' && !wasFinished) {
             wx.showModal({
-              title: '游戏结束',
-              content: '房主已进行结算，游戏结束！',
+              title: '游戏已结束',
+              content: '感谢您的使用。',
               showCancel: false
             });
           }
         }
       },
-      onError: err => {
+      onError: function (err) {
         console.error('房间监听器错误:', err);
-        // 5秒后尝试重连
-        if (this.roomListener) {
-          this.roomListener.close();
+        if (self.roomListener) {
+          self.roomListener.close();
         }
-        setTimeout(() => {
-          if (!this.data.isGameFinished) {
-            this.setupRoomListener();
+        setTimeout(function () {
+          if (!self.data.isGameFinished) {
+            self.setupRoomListener();
           }
         }, 5000);
       }
@@ -143,9 +229,13 @@ Page({
   _updateRoomData: function (room) {
     const players = room.players || [];
 
-    // 排序：房主排第一，其余按加入顺序（原数组顺序）
+    // 分离茶水系统玩家和真实玩家
+    const tea = players.find(p => p.openid === TEA_SYSTEM_ID || p.isSystem) || null;
+    const realPlayers = players.filter(p => p.openid !== TEA_SYSTEM_ID && !p.isSystem);
+
+    // 排序：房主排第一，其余按加入顺序
     const creatorId = room.creatorId;
-    const sorted = [...players].sort((a, b) => {
+    const sorted = [...realPlayers].sort((a, b) => {
       if (a.openid === creatorId) return -1;
       if (b.openid === creatorId) return 1;
       return 0;
@@ -155,50 +245,19 @@ Page({
       roomInfo: room,
       players: players,
       sortedPlayers: sorted,
+      teaPlayer: tea,
       isLoading: false,
       isGameFinished: room.status === 'finished'
     });
-
-    // 检查自己的昵称/头像是否为空，自动补充
-    this._ensureMyProfile(room);
   },
 
   /**
-   * 如果自己的昵称或头像为空，自动从本地缓存同步到云数据库
-   */
-  _ensureMyProfile: function (room) {
-    const myOpenId = this.data.myOpenId;
-    if (!myOpenId) return;
-
-    const me = (room.players || []).find(p => p.openid === myOpenId);
-    if (!me) return;
-
-    const cachedNick = wx.getStorageSync('nickName') || '';
-    const cachedAvatar = wx.getStorageSync('avatarUrl') || '';
-
-    // 如果房间中为空但本地有值，自动更新到云数据库
-    const needUpdate = (!me.nickName && cachedNick) || (!me.avatarUrl && cachedAvatar);
-    if (needUpdate) {
-      wx.cloud.callFunction({
-        name: 'updatePlayerInfo',
-        data: {
-          roomCode: this.data.roomCode,
-          nickName: me.nickName || cachedNick,
-          avatarUrl: me.avatarUrl || cachedAvatar
-        }
-      }).catch(err => {
-        console.error('自动更新用户信息失败:', err);
-      });
-    }
-  },
-
-  /**
-   * 加载全部历史送分记录（分页拉取，突破单次20条限制）
+   * 加载全部历史送分记录（分页拉取）
    */
   loadRecords: function () {
     const db = wx.cloud.database();
     const roomCode = this.data.roomCode;
-    const _ = db.command;
+    const self = this;
     let all = [];
     let page = 0;
     const pageSize = 20;
@@ -206,7 +265,6 @@ Page({
     const loadPage = () => {
       db.collection('score_records')
         .where({ roomCode: roomCode })
-        .orderBy('createdAt', 'desc')
         .skip(page * pageSize)
         .limit(pageSize)
         .get()
@@ -214,12 +272,16 @@ Page({
           const list = res.data || [];
           all = all.concat(list);
           if (list.length === pageSize) {
-            // 还有更多，继续拉取
             page++;
             loadPage();
           } else {
-            // 全部拉完，设置到页面（倒序→正序，最新的在最下面）
-            this.setData({ records: all.map(this._formatRecord) });
+            // 按时间倒序排列（最新在前）
+            all.sort(function (a, b) {
+              const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return tb - ta;
+            });
+            self.setData({ records: all.map(function (doc) { return self._formatRecord(doc); }) });
           }
         })
         .catch(err => {
@@ -235,26 +297,31 @@ Page({
    */
   setupRecordListener: function () {
     const db = wx.cloud.database();
-    const _ = db.command;
+    const self = this;
     this.recordListener = db.collection('score_records')
       .where({ roomCode: this.data.roomCode })
-      .orderBy('createdAt', 'desc')
       .limit(50)
       .watch({
-        onChange: res => {
+        onChange: function (res) {
           if (res.docs && res.docs.length > 0) {
-            const records = res.docs.map(this._formatRecord);
-            this.setData({ records: records });
+            // 按时间倒序排列
+            res.docs.sort(function (a, b) {
+              const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return tb - ta;
+            });
+            const records = res.docs.map(function (doc) { return self._formatRecord(doc); });
+            self.setData({ records: records });
           }
         },
-        onError: err => {
+        onError: function (err) {
           console.error('记录监听器错误:', err);
-          if (this.recordListener) {
-            this.recordListener.close();
+          if (self.recordListener) {
+            self.recordListener.close();
           }
-          setTimeout(() => {
-            if (!this.data.isGameFinished) {
-              this.setupRecordListener();
+          setTimeout(function () {
+            if (!self.data.isGameFinished) {
+              self.setupRecordListener();
             }
           }, 5000);
         }
@@ -262,7 +329,7 @@ Page({
   },
 
   /**
-   * 格式化单条记录（解析时间）
+   * 格式化单条记录
    */
   _formatRecord: function (doc) {
     const time = doc.createdAt;
@@ -273,15 +340,45 @@ Page({
       const m = d.getMinutes().toString().padStart(2, '0');
       timeStr = h + ':' + m;
     }
+
+    const myId = this.data.myOpenId;
+    const fromMe = doc.fromOpenId === myId;
+    const toMe = doc.toOpenId === myId;
+    const isTea = doc.toOpenId === TEA_SYSTEM_ID || doc.fromOpenId === TEA_SYSTEM_ID;
+
+    // 名字替换
+    let fromName = doc.fromName || '匿名';
+    let toName = doc.toName || '匿名';
+    if (fromMe) fromName = '我';
+    if (toMe) toName = '我';
+
+    // 文案
+    let text = '';
+    if (fromMe) {
+      text = '向 ' + toName + ' 送';
+    } else if (toMe) {
+      text = fromName + ' 向我 送';
+    } else {
+      text = fromName + ' 向 ' + toName + ' 送';
+    }
+
+    // 我送出的在左，别人送的在右
+    const isLeft = fromMe;
+
     return {
       fromOpenId: doc.fromOpenId,
       toOpenId: doc.toOpenId,
-      fromName: doc.fromName || '匿名',
-      toName: doc.toName || '匿名',
+      fromName: fromName,
+      toName: toName,
       fromAvatar: doc.fromAvatar || '',
       toAvatar: doc.toAvatar || '',
       value: doc.value || 0,
-      timeStr: timeStr
+      timeStr: timeStr,
+      isMine: fromMe || toMe,
+      isLeft: isLeft,
+      isTea: isTea,
+      desc: text,
+      valueStr: '+' + (doc.value || 0) + '分'
     };
   },
 
@@ -289,12 +386,14 @@ Page({
    * 点击自己 -- 弹出修改个人信息弹窗
    */
   onSelfTap: function (e) {
+    if (this.data.isGameFinished) return;
+
     const index = e.currentTarget.dataset.index;
     const player = this.data.sortedPlayers[index] || {};
 
     this.setData({
       editAvatarUrl: player.avatarUrl || '',
-      editRemark: player.remark || '',
+      editNickname: player.nickName || '',
       showProfileEdit: true
     });
   },
@@ -308,7 +407,7 @@ Page({
   },
 
   /**
-   * 实时获取微信头像（仅预选，需点保存才生效）
+   * 获取微信头像（仅预选，需点保存才生效）
    */
   onChooseWechatAvatar: function (e) {
     const avatarUrl = e.detail.avatarUrl;
@@ -318,34 +417,69 @@ Page({
   },
 
   /**
-   * 输入备注
+   * 获取微信昵称
    */
-  onRemarkInput: function (e) {
-    this.setData({ editRemark: e.detail.value });
+  onNicknameConfirm: function (e) {
+    // type="nickname" 的 input 在确认后触发
+    const nickName = e.detail.value;
+    if (nickName) {
+      this.setData({ editNickname: nickName });
+    }
+  },
+
+  /**
+   * 输入昵称
+   */
+  onNicknameInput: function (e) {
+    this.setData({ editNickname: e.detail.value });
   },
 
   /**
    * 保存个人信息修改
    */
   confirmProfileEdit: function () {
+    const nickName = this.data.editNickname.trim();
+    const avatarUrl = this.data.editAvatarUrl;
+
+    if (!nickName) {
+      wx.showToast({ title: '请输入昵称', icon: 'none' });
+      return;
+    }
+
+    if (!avatarUrl) {
+      wx.showToast({ title: '请选择一个头像', icon: 'none' });
+      return;
+    }
+
+    wx.showLoading({ title: '保存中...', mask: true });
+
     wx.cloud.callFunction({
       name: 'updatePlayerInfo',
       data: {
         roomCode: this.data.roomCode,
-        avatarUrl: this.data.editAvatarUrl,
-        remark: this.data.editRemark
+        nickName: nickName,
+        avatarUrl: avatarUrl
       }
     }).then(res => {
+      wx.hideLoading();
+
       if (res.result && res.result.code === 0) {
         wx.showToast({ title: '保存成功', icon: 'success' });
+        this.setData({
+          showProfileEdit: false,
+          editAvatarUrl: '',
+          editNickname: ''
+        });
+      } else if (res.result && res.result.code === -2) {
+        // 昵称被占用
+        wx.showToast({ title: res.result.message || '昵称已被占用', icon: 'none' });
       } else {
         wx.showToast({ title: (res.result && res.result.message) || '保存失败', icon: 'none' });
       }
-      this.cancelProfileEdit();
     }).catch(err => {
+      wx.hideLoading();
       console.error('保存个人信息失败:', err);
       wx.showToast({ title: '网络错误', icon: 'none' });
-      this.cancelProfileEdit();
     });
   },
 
@@ -356,7 +490,7 @@ Page({
     this.setData({
       showProfileEdit: false,
       editAvatarUrl: '',
-      editRemark: ''
+      editNickname: ''
     });
   },
 
@@ -383,9 +517,7 @@ Page({
    * 弹窗内输入分数
    */
   onKeypadInput: function (e) {
-    // 只允许正整数
     let val = e.detail.value.replace(/[^0-9]/g, '');
-    // 去掉前导零
     if (val.length > 1 && val[0] === '0') {
       val = val.replace(/^0+/, '') || '0';
     }
@@ -399,7 +531,6 @@ Page({
     const amount = e.currentTarget.dataset.amount;
     const current = parseInt(this.data.keypadValue) || 0;
     const newVal = current + amount;
-    // 最大99999
     this.setData({ keypadValue: String(Math.min(newVal, 99999)) });
   },
 
@@ -462,18 +593,14 @@ Page({
    * 取消送分
    */
   cancelSend: function () {
-    this.setData({
-      showKeypad: false
-    });
+    this.setData({ showKeypad: false });
     this._clearSelection();
   },
 
   /**
-   * 阻止事件冒泡（弹窗内部点击不关闭弹窗）
+   * 阻止事件冒泡
    */
-  stopPropagation: function () {
-    // 空函数，仅用于阻止冒泡
-  },
+  stopPropagation: function () {},
 
   /**
    * 清除选择状态
@@ -499,27 +626,16 @@ Page({
   },
 
   /**
-   * 结算游戏（仅房主）
+   * 结束游戏（仅房主）
    */
   settleGame: function () {
     if (!this.data.isOwner) return;
     if (this.data.isGameFinished) return;
 
-    // 展示当前各玩家分数
-    const players = this.data.players;
-    const scoreSummary = players.map(p => {
-      const name = p.nickName || '匿名';
-      const score = p.score || 0;
-      return name + ': ' + score + '分';
-    }).join('\n');
-
-    const total = players.reduce((s, p) => s + (p.score || 0), 0);
-    const adjust = players.length > 0 ? (-total / players.length).toFixed(1) : 0;
-
     wx.showModal({
-      title: '确认结算',
-      content: '当前分数：\n' + scoreSummary + '\n\n总分：' + total + '\n每人调整：' + adjust + '分\n\n结算后游戏将结束，确定？',
-      confirmText: '确认结算',
+      title: '确认结束',
+      content: '结束后房间将不能再进行游戏记分，只能查看各位玩家的最终分数，且只有房主能重新进入。',
+      confirmText: '确认结束',
       confirmColor: '#f5576c',
       success: res => {
         if (res.confirm) {
@@ -533,7 +649,7 @@ Page({
    * 执行结算
    */
   _performSettle: function () {
-    wx.showLoading({ title: '结算中...', mask: true });
+    wx.showLoading({ title: '结束中...', mask: true });
 
     wx.cloud.callFunction({
       name: 'settleGame',
@@ -542,14 +658,10 @@ Page({
       wx.hideLoading();
 
       if (res.result && res.result.code === 0) {
-        wx.showModal({
-          title: '结算完成',
-          content: '游戏已结束！最终分数已保存至历史记录。',
-          showCancel: false
-        });
+        // 结束成功，页面会通过 watch 监听自动刷新为已结束状态
       } else {
         wx.showToast({
-          title: (res.result && res.result.message) || '结算失败',
+          title: (res.result && res.result.message) || '操作失败',
           icon: 'none'
         });
       }
@@ -564,6 +676,6 @@ Page({
    * 返回首页
    */
   goBack: function () {
-    wx.navigateBack();
+    wx.reLaunch({ url: '/pages/create/create' });
   }
 });

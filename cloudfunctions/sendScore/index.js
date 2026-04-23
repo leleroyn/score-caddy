@@ -1,5 +1,5 @@
 // 云函数: sendScore
-// 发送分数给其他玩家
+// 发送分数给其他玩家（包括茶水系统玩家）
 
 const cloud = require('wx-server-sdk')
 
@@ -9,14 +9,14 @@ cloud.init({
 
 exports.main = async (event, context) => {
   try {
-    const { targetOpenId, value } = event;
-    const { OPENID } = cloud.getWXContext(); // 当前用户的openid
+    const { roomCode, targetOpenId, value } = event;
+    const { OPENID } = cloud.getWXContext();
     
     // 参数验证
-    if (!targetOpenId || !value) {
+    if (!roomCode || !targetOpenId || !value) {
       return {
         code: -1,
-        message: '参数错误：缺少目标玩家ID或分数值'
+        message: '参数错误：缺少房间号、目标玩家ID或分数值'
       };
     }
     
@@ -41,34 +41,30 @@ exports.main = async (event, context) => {
     
     // 使用事务确保数据一致性
     return db.runTransaction(async function (transaction) {
-      // 获取房间信息（需要从某个房间中获取，这里假设用户只在一个房间中）
-      // 实际应用中可能需要从前端传入roomCode，或者通过其他方式确定房间
+      // 通过 roomCode 获取房间
       const roomResult = await transaction.collection('rooms')
-        .where({
-          'players.openid': _.in([OPENID, targetOpenId])
-        })
+        .where({ roomCode })
         .get();
       
       if (roomResult.data.length === 0) {
-        throw new Error('未找到包含双方的房间');
+        throw new Error('房间不存在');
       }
       
       const room = roomResult.data[0];
       
-      // 验证双方都在同一个房间中
+      // 验证当前用户在房间中
       const playerInRoom = room.players.some(p => p.openid === OPENID);
-      const targetInRoom = room.players.some(p => p.openid === targetOpenId);
-      
-      if (!playerInRoom || !targetInRoom) {
-        throw new Error('玩家不在同一个房间中');
+      if (!playerInRoom) {
+        throw new Error('你不在该房间中');
       }
       
-      // 更新分数：当前玩家减分，目标玩家加分
-      const updateData = {};
-      updateData[`players.$.score`] = _.inc(-scoreValue); // 当前玩家减分
-      // 注意：这里需要分别更新两个玩家的分数
+      // 验证目标玩家在房间中
+      const targetInRoom = room.players.some(p => p.openid === targetOpenId);
+      if (!targetInRoom) {
+        throw new Error('目标玩家不在该房间中');
+      }
       
-      // 先更新当前玩家分数
+      // 先更新当前玩家分数（减分）
       await transaction.collection('rooms')
         .where({
           _id: room._id,
@@ -80,7 +76,7 @@ exports.main = async (event, context) => {
           }
         });
       
-      // 再更新目标玩家分数
+      // 再更新目标玩家分数（加分）
       await transaction.collection('rooms')
         .where({
           _id: room._id,

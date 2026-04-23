@@ -7,7 +7,8 @@ Page({
     showMoreCount: false,
     joinRoomCode: '',
     isCreating: false,
-    isJoining: false
+    isJoining: false,
+    enableTea: false
   },
 
   onLoad: function (options) {
@@ -29,6 +30,10 @@ Page({
     this.setData({ showMoreCount: !this.data.showMoreCount });
   },
 
+  toggleTea: function () {
+    this.setData({ enableTea: !this.data.enableTea });
+  },
+
   onJoinCodeInput: function (e) {
     let val = e.detail.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
     this.setData({ joinRoomCode: val });
@@ -48,7 +53,8 @@ Page({
       return wx.cloud.callFunction({
         name: 'createRoom',
         data: {
-          playerCount: this.data.playerCount
+          playerCount: this.data.playerCount,
+          enableTea: this.data.enableTea
         }
       });
     }).then(res => {
@@ -58,7 +64,7 @@ Page({
       if (res.result && res.result.code === 0) {
         const roomInfo = res.result.room;
         wx.setStorageSync('lastRoomCode', roomInfo.roomCode);
-        wx.navigateTo({
+        wx.redirectTo({
           url: '/pages/room/room?roomCode=' + roomInfo.roomCode + '&isCreator=1'
         });
       } else {
@@ -76,7 +82,7 @@ Page({
   },
 
   /**
-   * 加入房间
+   * 加入房间（支持已结束房间查看历史）
    */
   joinRoom: function () {
     if (this.data.isJoining) return;
@@ -88,85 +94,61 @@ Page({
     }
 
     this.setData({ isJoining: true });
-    wx.showLoading({ title: '加入中...', mask: true });
+    wx.showLoading({ title: '查询中...', mask: true });
 
-    // 先确保登录
-    app.ensureLogin().then(() => {
-      const db = wx.cloud.database();
-      return db.collection('rooms').where({ roomCode: code }).get();
-    }).then(res => {
-      wx.hideLoading();
+    const self = this;
 
+    // 先查房间状态
+    wx.cloud.database().collection('rooms').where({ roomCode: code }).get().then(function (res) {
       if (res.data.length === 0) {
-        this.setData({ isJoining: false });
+        wx.hideLoading();
+        self.setData({ isJoining: false });
         wx.showToast({ title: '房间不存在', icon: 'none' });
-        return;
+        return null;
       }
 
       const room = res.data[0];
 
+      // 已结束的房间，直接跳转查看历史
       if (room.status === 'finished') {
-        this.setData({ isJoining: false });
-        wx.showToast({ title: '游戏已结束', icon: 'none' });
-        return;
+        wx.hideLoading();
+        self.setData({ isJoining: false });
+        const myId = wx.getStorageSync('openId') || '';
+        const isCreator = room.creatorId === myId ? '1' : '0';
+        wx.redirectTo({
+          url: '/pages/room/room?roomCode=' + code + '&isCreator=' + isCreator
+        });
+        return null;
       }
 
-      if (room.players.length >= (room.maxPlayers || 10)) {
-        this.setData({ isJoining: false });
-        wx.showToast({ title: '房间已满', icon: 'none' });
-        return;
-      }
+      // 进行中的房间，走正常加入流程
+      return app.ensureLogin().then(function () {
+        return wx.cloud.callFunction({
+          name: 'joinRoom',
+          data: { roomCode: code }
+        });
+      });
+    }).then(function (res) {
+      if (!res) return;
+      wx.hideLoading();
+      self.setData({ isJoining: false });
 
-      const openId = app.globalData.openId || wx.getStorageSync('openId') || '';
-      const alreadyInRoom = room.players.some(p => p.openid === openId);
-
-      wx.setStorageSync('lastRoomCode', code);
-
-      if (alreadyInRoom) {
-        this.setData({ isJoining: false });
-        wx.navigateTo({
+      const result = res.result || {};
+      if (result.code === 0 || result.code === 1) {
+        wx.setStorageSync('lastRoomCode', code);
+        wx.redirectTo({
           url: '/pages/room/room?roomCode=' + code + '&isCreator=0'
         });
       } else {
-        this._callJoinRoom(code);
-      }
-    }).catch(err => {
-      wx.hideLoading();
-      this.setData({ isJoining: false });
-      console.error('joinRoom:', err);
-      wx.showToast({ title: '网络错误，请重试', icon: 'none' });
-    });
-  },
-
-  /**
-   * 调用云函数加入房间
-   */
-  _callJoinRoom: function (roomCode) {
-    wx.showLoading({ title: '加入中...', mask: true });
-
-    wx.cloud.callFunction({
-      name: 'joinRoom',
-      data: {
-        roomCode: roomCode
-      }
-    }).then(res => {
-      wx.hideLoading();
-      this.setData({ isJoining: false });
-
-      if (res.result && res.result.code === 0) {
-        wx.navigateTo({
-          url: '/pages/room/room?roomCode=' + roomCode + '&isCreator=0'
-        });
-      } else {
         wx.showToast({
-          title: (res.result && res.result.message) || '加入失败',
+          title: result.message || '加入失败',
           icon: 'none'
         });
       }
-    }).catch(err => {
+    }).catch(function (err) {
       wx.hideLoading();
-      this.setData({ isJoining: false });
-      console.error('joinRoom 云函数调用失败:', err);
+      self.setData({ isJoining: false });
+      console.error('joinRoom:', err);
       wx.showToast({ title: '网络错误，请重试', icon: 'none' });
     });
   }

@@ -30,6 +30,13 @@
       <view wx:if="{{!showMoreCount}}" class="more-row" bindtap="toggleMoreCount">
         <text class="more-text">更多人数</text>
       </view>
+      <!-- 收取茶水开关 -->
+      <view class="tea-row" bindtap="toggleTea">
+        <text class="tea-label">收取茶水</text>
+        <view class="tea-switch {{enableTea ? 'tea-switch-on' : ''}}">
+          <view class="tea-switch-dot"></view>
+        </view>
+      </view>
       <button class="btn-create" bindtap="createRoom" loading="{{isCreating}}" disabled="{{isCreating}}">
         开房间
       </button>

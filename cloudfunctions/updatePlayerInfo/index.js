@@ -9,7 +9,7 @@ cloud.init({
 
 exports.main = async (event, context) => {
   try {
-    const { roomCode, nickName, avatarUrl, remark } = event;
+    const { roomCode, nickName, avatarUrl } = event;
     const { OPENID } = cloud.getWXContext();
 
     if (!roomCode) {
@@ -17,6 +17,19 @@ exports.main = async (event, context) => {
     }
 
     const db = cloud.database();
+
+    // 如果要修改昵称，先检查是否被其他玩家占用
+    if (nickName !== undefined && nickName !== '') {
+      const roomResult = await db.collection('rooms').where({ roomCode }).get();
+      if (roomResult.data.length === 0) {
+        return { code: -1, message: '房间不存在' };
+      }
+      const room = roomResult.data[0];
+      const duplicate = room.players.find(p => p.openid !== OPENID && p.nickName === nickName);
+      if (duplicate) {
+        return { code: -2, message: '昵称"' + nickName + '"已被其他玩家使用' };
+      }
+    }
 
     // 构建更新数据
     const updateData = {
@@ -28,12 +41,9 @@ exports.main = async (event, context) => {
     if (avatarUrl !== undefined) {
       updateData['players.$.avatarUrl'] = avatarUrl || '';
     }
-    if (remark !== undefined) {
-      updateData['players.$.remark'] = remark || '';
-    }
 
     // 更新该玩家在房间中的信息
-    const result = await db.collection('rooms')
+    await db.collection('rooms')
       .where({
         roomCode,
         'players.openid': OPENID
