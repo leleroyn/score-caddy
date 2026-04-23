@@ -208,6 +208,30 @@
   text-align: center;
 }
 
+.player-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 6rpx;
+  max-width: 150rpx;
+}
+
+.creator-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 2rpx;
+  flex-shrink: 0;
+}
+
+.player-remark {
+  font-size: 20rpx;
+  color: #999;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .player-score {
   font-size: 30rpx;
   font-weight: 700;
@@ -221,15 +245,6 @@
 
 .player-score.score-negative {
   color: #27ae60;
-}
-
-.creator-tag {
-  font-size: 18rpx;
-  color: #e67e22;
-  background: #fff3e0;
-  padding: 1rpx 10rpx;
-  border-radius: 6rpx;
-  margin-top: 4rpx;
 }
 
 .cell-hover {
@@ -325,6 +340,91 @@
   flex-shrink: 0;
   width: 80rpx;
   text-align: right;
+}
+
+/* ========= 修改个人信息弹窗 ========= */
+.edit-avatar-preview {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.edit-avatar-img {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  border: 3px solid #667eea;
+}
+
+.preset-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.preset-item {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.preset-selected {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.preset-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+}
+
+.use-wechat-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 12rpx 0;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #667eea;
+  border: 1px dashed #667eea;
+  border-radius: 10px;
+  background: transparent;
+  line-height: normal;
+}
+
+.use-wechat-btn::after {
+  border: none;
+}
+
+.profile-edit-field {
+  margin-bottom: 16px;
+}
+
+.edit-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+.edit-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #333;
+  box-sizing: border-box;
 }
 
 /* ========= 底部操作区 ========= */

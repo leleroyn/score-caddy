@@ -16,7 +16,16 @@ Page({
     selectedTargetId: null,
     targetNickname: '',
     isSending: false,
-    records: []
+    records: [],
+    showProfileEdit: false,
+    editAvatarUrl: '',
+    editRemark: '',
+    presetAvatars: [
+      '/images/avatars/boy-1.svg', '/images/avatars/boy-2.svg', '/images/avatars/boy-3.svg',
+      '/images/avatars/girl-1.svg', '/images/avatars/girl-2.svg', '/images/avatars/girl-3.svg',
+      '/images/avatars/kid-1.svg', '/images/avatars/kid-2.svg',
+      '/images/avatars/elder-m.svg', '/images/avatars/elder-f.svg'
+    ]
   },
 
   /**
@@ -184,23 +193,41 @@ Page({
   },
 
   /**
-   * 加载历史送分记录
+   * 加载全部历史送分记录（分页拉取，突破单次20条限制）
    */
   loadRecords: function () {
     const db = wx.cloud.database();
+    const roomCode = this.data.roomCode;
     const _ = db.command;
-    db.collection('score_records')
-      .where({ roomCode: this.data.roomCode })
-      .orderBy('createdAt', 'desc')
-      .limit(50)
-      .get()
-      .then(res => {
-        const records = (res.data || []).map(this._formatRecord);
-        this.setData({ records: records });
-      })
-      .catch(err => {
-        console.error('加载送分记录失败:', err);
-      });
+    let all = [];
+    let page = 0;
+    const pageSize = 20;
+
+    const loadPage = () => {
+      db.collection('score_records')
+        .where({ roomCode: roomCode })
+        .orderBy('createdAt', 'desc')
+        .skip(page * pageSize)
+        .limit(pageSize)
+        .get()
+        .then(res => {
+          const list = res.data || [];
+          all = all.concat(list);
+          if (list.length === pageSize) {
+            // 还有更多，继续拉取
+            page++;
+            loadPage();
+          } else {
+            // 全部拉完，设置到页面（倒序→正序，最新的在最下面）
+            this.setData({ records: all.map(this._formatRecord) });
+          }
+        })
+        .catch(err => {
+          console.error('加载送分记录失败:', err);
+        });
+    };
+
+    loadPage();
   },
 
   /**
@@ -256,6 +283,81 @@ Page({
       value: doc.value || 0,
       timeStr: timeStr
     };
+  },
+
+  /**
+   * 点击自己 -- 弹出修改个人信息弹窗
+   */
+  onSelfTap: function (e) {
+    const index = e.currentTarget.dataset.index;
+    const player = this.data.sortedPlayers[index] || {};
+
+    this.setData({
+      editAvatarUrl: player.avatarUrl || '',
+      editRemark: player.remark || '',
+      showProfileEdit: true
+    });
+  },
+
+  /**
+   * 选择预设头像
+   */
+  selectPresetAvatar: function (e) {
+    const url = e.currentTarget.dataset.url;
+    this.setData({ editAvatarUrl: url });
+  },
+
+  /**
+   * 实时获取微信头像（仅预选，需点保存才生效）
+   */
+  onChooseWechatAvatar: function (e) {
+    const avatarUrl = e.detail.avatarUrl;
+    if (avatarUrl) {
+      this.setData({ editAvatarUrl: avatarUrl });
+    }
+  },
+
+  /**
+   * 输入备注
+   */
+  onRemarkInput: function (e) {
+    this.setData({ editRemark: e.detail.value });
+  },
+
+  /**
+   * 保存个人信息修改
+   */
+  confirmProfileEdit: function () {
+    wx.cloud.callFunction({
+      name: 'updatePlayerInfo',
+      data: {
+        roomCode: this.data.roomCode,
+        avatarUrl: this.data.editAvatarUrl,
+        remark: this.data.editRemark
+      }
+    }).then(res => {
+      if (res.result && res.result.code === 0) {
+        wx.showToast({ title: '保存成功', icon: 'success' });
+      } else {
+        wx.showToast({ title: (res.result && res.result.message) || '保存失败', icon: 'none' });
+      }
+      this.cancelProfileEdit();
+    }).catch(err => {
+      console.error('保存个人信息失败:', err);
+      wx.showToast({ title: '网络错误', icon: 'none' });
+      this.cancelProfileEdit();
+    });
+  },
+
+  /**
+   * 取消修改个人信息
+   */
+  cancelProfileEdit: function () {
+    this.setData({
+      showProfileEdit: false,
+      editAvatarUrl: '',
+      editRemark: ''
+    });
   },
 
   /**

@@ -34,32 +34,44 @@
   <!-- 玩家横向一排 -->
   <view wx:if="{{!isLoading}}" class="players-strip">
     <block wx:for="{{sortedPlayers}}" wx:key="openid">
-      <!-- 自己 -->
-      <view wx:if="{{openid === myOpenId}}" class="player-cell self-cell">
+      <!-- 自己（点击弹出修改弹窗） -->
+      <view 
+        class="player-cell self-cell"
+        data-openid="{{item.openid}}"
+        data-index="{{index}}"
+        bindtap="onSelfTap"
+        hover-class="cell-hover"
+      >
         <view class="player-avatar-wrap self-avatar">
-          <image src="{{avatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="player-avatar-img" />
+          <image src="{{item.avatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="player-avatar-img" />
           <text class="self-badge">我</text>
         </view>
-        <text class="player-name">{{nickName || '等待'}}</text>
-        <view class="player-score {{score > 0 ? 'score-positive' : score < 0 ? 'score-negative' : ''}}">{{score}}</view>
-        <text class="creator-tag" wx:if="{{openid === roomInfo.creatorId}}">房主</text>
+        <view class="player-name-row">
+          <image wx:if="{{item.openid === roomInfo.creatorId}}" class="creator-icon" src="/images/house-icon.svg" mode="aspectFit" />
+          <text class="player-name">{{item.nickName || '等待'}}</text>
+          <text class="player-remark" wx:if="{{item.remark}}">({{item.remark}})</text>
+        </view>
+        <view class="player-score {{item.score > 0 ? 'score-positive' : item.score < 0 ? 'score-negative' : ''}}">{{item.score}}</view>
       </view>
       <!-- 其他人（可点击送分） -->
       <view 
-        wx:else 
+        wx:if="{{item.openid !== myOpenId}}"
         class="player-cell other-cell {{isGameFinished ? 'disabled' : ''}}"
         data-index="{{index}}"
-        data-openid="{{openid}}"
-        data-nickname="{{nickName || '匿名用户'}}"
+        data-openid="{{item.openid}}"
+        data-nickname="{{item.nickName || '匿名用户'}}"
         bindtap="onPlayerTap"
         hover-class="cell-hover"
       >
         <view class="player-avatar-wrap">
-          <image src="{{avatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="player-avatar-img" />
+          <image src="{{item.avatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="player-avatar-img" />
         </view>
-        <text class="player-name">{{nickName || '等待'}}</text>
-        <view class="player-score {{score > 0 ? 'score-positive' : score < 0 ? 'score-negative' : ''}}">{{score}}</view>
-        <text class="creator-tag" wx:if="{{openid === roomInfo.creatorId}}">房主</text>
+        <view class="player-name-row">
+          <image wx:if="{{item.openid === roomInfo.creatorId}}" class="creator-icon" src="/images/house-icon.svg" mode="aspectFit" />
+          <text class="player-name">{{item.nickName || '等待'}}</text>
+          <text class="player-remark" wx:if="{{item.remark}}">({{item.remark}})</text>
+        </view>
+        <view class="player-score {{item.score > 0 ? 'score-positive' : item.score < 0 ? 'score-negative' : ''}}">{{item.score}}</view>
       </view>
     </block>
   </view>
@@ -139,6 +151,57 @@
         </view>
         <view class="modal-btn modal-btn-confirm" catchtap="confirmSend">
           <text>确认送出</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 修改个人信息弹窗 -->
+  <view wx:if="{{showProfileEdit}}" class="modal-mask" catchtap="cancelProfileEdit">
+    <view class="modal-sheet" catchtap="stopPropagation">
+      <view class="modal-header">
+        <text class="modal-title">修改个人信息</text>
+        <view class="modal-close" catchtap="cancelProfileEdit">
+          <text>X</text>
+        </view>
+      </view>
+      <view class="modal-body">
+        <!-- 当前头像预览 -->
+        <view class="edit-avatar-preview">
+          <image src="{{editAvatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="edit-avatar-img" />
+        </view>
+        <!-- 预设头像网格 -->
+        <view class="preset-grid">
+          <view 
+            wx:for="{{presetAvatars}}" 
+            wx:key="*this"
+            class="preset-item {{editAvatarUrl === item ? 'preset-selected' : ''}}"
+            data-url="{{item}}"
+            bindtap="selectPresetAvatar"
+          >
+            <image src="{{item}}" mode="aspectFill" class="preset-avatar" />
+          </view>
+        </view>
+        <!-- 使用微信头像 -->
+        <button class="use-wechat-btn" open-type="chooseAvatar" bindchooseavatar="onChooseWechatAvatar">使用微信头像</button>
+        <!-- 备注输入 -->
+        <view class="profile-edit-field">
+          <text class="edit-label">备注</text>
+          <input 
+            class="edit-input" 
+            placeholder="给自己加个备注方便辨识"
+            value="{{editRemark}}"
+            bindinput="onRemarkInput"
+            maxlength="10"
+          />
+        </view>
+      </view>
+      <view class="modal-footer">
+        <view class="modal-btn modal-btn-cancel" catchtap="cancelProfileEdit">
+          <text>取消</text>
+        </view>
+        <view class="modal-btn modal-btn-confirm" catchtap="confirmProfileEdit">
+          <text>保存</text>
         </view>
       </view>
     </view>

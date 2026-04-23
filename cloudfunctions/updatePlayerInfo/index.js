@@ -9,7 +9,7 @@ cloud.init({
 
 exports.main = async (event, context) => {
   try {
-    const { roomCode, nickName, avatarUrl } = event;
+    const { roomCode, nickName, avatarUrl, remark } = event;
     const { OPENID } = cloud.getWXContext();
 
     if (!roomCode) {
@@ -18,18 +18,28 @@ exports.main = async (event, context) => {
 
     const db = cloud.database();
 
-    // 更新该玩家在房间中的昵称和头像
+    // 构建更新数据
+    const updateData = {
+      updateTime: db.serverDate()
+    };
+    if (nickName !== undefined) {
+      updateData['players.$.nickName'] = nickName || '';
+    }
+    if (avatarUrl !== undefined) {
+      updateData['players.$.avatarUrl'] = avatarUrl || '';
+    }
+    if (remark !== undefined) {
+      updateData['players.$.remark'] = remark || '';
+    }
+
+    // 更新该玩家在房间中的信息
     const result = await db.collection('rooms')
       .where({
         roomCode,
         'players.openid': OPENID
       })
       .update({
-        data: {
-          'players.$.nickName': nickName || '',
-          'players.$.avatarUrl': avatarUrl || '',
-          updateTime: db.serverDate()
-        }
+        data: updateData
       });
 
     return { code: 0, message: '更新成功' };

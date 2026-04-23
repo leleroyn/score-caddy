@@ -6,34 +6,6 @@
     <text class="subtitle">快速记分助手</text>
   </view>
 
-  <!-- 个人信息栏 -->
-  <view class="profile-bar">
-    <view class="avatar-btn" bindtap="showAvatarPicker">
-      <image src="{{myAvatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill" class="avatar-img" />
-    </view>
-    <view class="profile-info">
-      <text class="profile-label">设置你的游戏身份</text>
-      <input type="nickname" class="nickname-input" placeholder="取个昵称" value="{{myNickName}}" bindinput="onNicknameConfirm" />
-    </view>
-  </view>
-
-  <!-- 卡通头像选择器 -->
-  <view class="avatar-picker-mask" wx:if="{{showAvatarPicker}}" bindtap="hideAvatarPicker"></view>
-  <view class="avatar-picker {{showAvatarPicker ? 'show' : ''}}">
-    <view class="picker-header">
-      <text class="picker-title">选个头像</text>
-      <text class="picker-close" bindtap="hideAvatarPicker">完成</text>
-    </view>
-    <view class="picker-grid">
-      <view class="picker-item {{myAvatarUrl === item ? 'selected' : ''}}" wx:for="{{avatarList}}" wx:key="*this" bindtap="pickAvatar" data-url="{{item}}">
-        <image src="{{item}}" mode="aspectFill" class="picker-avatar" />
-      </view>
-    </view>
-    <button class="picker-custom-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
-      <text>使用真实头像</text>
-    </button>
-  </view>
-
   <!-- 主内容卡片 -->
   <view class="card">
     <!-- 创建房间 -->

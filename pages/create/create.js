@@ -7,30 +7,10 @@ Page({
     showMoreCount: false,
     joinRoomCode: '',
     isCreating: false,
-    isJoining: false,
-    myNickName: '',
-    myAvatarUrl: '',
-    showAvatarPicker: false,
-    avatarList: [
-      '/images/avatars/girl-1.svg',
-      '/images/avatars/girl-2.svg',
-      '/images/avatars/girl-3.svg',
-      '/images/avatars/boy-1.svg',
-      '/images/avatars/boy-2.svg',
-      '/images/avatars/boy-3.svg',
-      '/images/avatars/elder-m.svg',
-      '/images/avatars/elder-f.svg',
-      '/images/avatars/kid-1.svg',
-      '/images/avatars/kid-2.svg'
-    ]
+    isJoining: false
   },
 
   onLoad: function (options) {
-    // 恢复用户信息
-    const nickName = wx.getStorageSync('nickName') || '';
-    const avatarUrl = wx.getStorageSync('avatarUrl') || '';
-    this.setData({ myNickName: nickName, myAvatarUrl: avatarUrl });
-
     // 通过分享链接进入，自动填入房间号
     if (options && options.joinCode) {
       this.setData({ joinRoomCode: options.joinCode });
@@ -55,72 +35,6 @@ Page({
   },
 
   /**
-   * 选择昵称（使用微信的 nickname-input 组件回调）
-   */
-  onNicknameConfirm: function (e) {
-    const nickName = e.detail.value || '';
-    if (nickName) {
-      this.setData({ myNickName: nickName });
-      app.saveUserInfo(nickName, app.globalData.userInfo.avatarUrl);
-    }
-  },
-
-  showAvatarPicker: function () {
-    this.setData({ showAvatarPicker: true });
-  },
-
-  hideAvatarPicker: function () {
-    this.setData({ showAvatarPicker: false });
-  },
-
-  pickAvatar: function (e) {
-    const url = e.currentTarget.dataset.url;
-    this.setData({ myAvatarUrl: url });
-    app.saveUserInfo(app.globalData.userInfo.nickName, url);
-    this.hideAvatarPicker();
-  },
-
-  /**
-   * 选择真实头像（微信 choose-avatar 组件回调）
-   */
-  onChooseAvatar: function (e) {
-    const avatarUrl = e.detail.avatarUrl;
-    if (avatarUrl) {
-      this.setData({ myAvatarUrl: avatarUrl, showAvatarPicker: false });
-      this._uploadAvatar(avatarUrl);
-    }
-  },
-
-  /**
-   * 上传头像到云存储
-   */
-  _uploadAvatar: function (tempPath) {
-    const cloudPath = 'avatars/' + (wx.getStorageSync('openId') || Date.now()) + '_' + Date.now() + '.jpg';
-    wx.cloud.uploadFile({
-      cloudPath,
-      filePath: tempPath,
-      success: res => {
-        app.saveUserInfo(app.globalData.userInfo.nickName, res.fileID);
-        this.setData({ myAvatarUrl: res.fileID });
-      },
-      fail: err => {
-        console.error('头像上传失败:', err);
-        app.saveUserInfo(app.globalData.userInfo.nickName, tempPath);
-      }
-    });
-  },
-
-  /**
-   * 获取当前用户信息（用于传给云函数）
-   */
-  _getMyInfo: function () {
-    return {
-      nickName: app.globalData.userInfo.nickName || wx.getStorageSync('nickName') || '',
-      avatarUrl: app.globalData.userInfo.avatarUrl || wx.getStorageSync('avatarUrl') || ''
-    };
-  },
-
-  /**
    * 创建房间
    */
   createRoom: function () {
@@ -131,13 +45,10 @@ Page({
 
     // 先确保登录
     app.ensureLogin().then(openId => {
-      const myInfo = this._getMyInfo();
       return wx.cloud.callFunction({
         name: 'createRoom',
         data: {
-          playerCount: this.data.playerCount,
-          nickName: myInfo.nickName,
-          avatarUrl: myInfo.avatarUrl
+          playerCount: this.data.playerCount
         }
       });
     }).then(res => {
@@ -233,14 +144,10 @@ Page({
   _callJoinRoom: function (roomCode) {
     wx.showLoading({ title: '加入中...', mask: true });
 
-    const myInfo = this._getMyInfo();
-
     wx.cloud.callFunction({
       name: 'joinRoom',
       data: {
-        roomCode: roomCode,
-        nickName: myInfo.nickName,
-        avatarUrl: myInfo.avatarUrl
+        roomCode: roomCode
       }
     }).then(res => {
       wx.hideLoading();
